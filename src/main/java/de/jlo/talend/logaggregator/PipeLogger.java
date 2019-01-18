@@ -47,6 +47,7 @@ public class PipeLogger {
 	private String jobName = null;
 	private String graylogHost = null;
 	private Date applicationStartTime = new Date();
+	private boolean addStartStopMessage = true;
 	
     public static void main(String[] args) {
     	PipeLogger la = new PipeLogger();
@@ -73,6 +74,7 @@ public class PipeLogger {
     	options.addOption("x", "max_time_between_lines", true, "Max time between lines to get them as one message");
     	options.addOption("y", "max_time_until_send", true, "Max time to collect data until a new message will be send");
     	options.addOption("p", "pid", true, "Process identifier");
+    	options.addOption("a", "add_start_stop", true, "Add a message for start and stop (default = true)");
     	CommandLineParser parser = new DefaultParser();
     	try {
 			String message = null;
@@ -116,6 +118,10 @@ public class PipeLogger {
 				System.exit(4);
 			}
 			graylogHost = cmd.getOptionValue('g');
+			String a = cmd.getOptionValue('a');
+			if (a != null && a.trim().isEmpty() == false) {
+				addStartStopMessage = ("false".equals(a) == false);
+			}
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
@@ -223,6 +229,9 @@ public class PipeLogger {
     public void start() {
     	startWriter();
     	startPipeReader();
+    	if (addStartStopMessage) {
+    		logger.info("Start: " + jobName);
+    	}
     }
     
     public void stop() {
@@ -234,6 +243,10 @@ public class PipeLogger {
     	} catch (Exception e) {
     		//ignore
     	}
+    	if (addStartStopMessage) {
+    		logger.info("Stop: " + jobName);
+    	}
+    	LogManager.shutdown();
     }
     
     public void startPipeReader() {
@@ -375,7 +388,9 @@ public class PipeLogger {
 					}
 				}
 			}
-			LogManager.shutdown();
+	    	if (addStartStopMessage) {
+	    		logger.info("Stop: " + jobName);
+	    	}
     	}
     	
     }
