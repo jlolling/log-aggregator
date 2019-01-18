@@ -21,9 +21,9 @@ import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.xml.DOMConfigurator;
 import org.graylog2.log.GelfAppender;
 
-
 /**
- * Hello world!
+ * Log line aggregator
+ * @author jan.lolling@gmail.com
  *
  */
 public class LogAgg {
@@ -31,12 +31,12 @@ public class LogAgg {
 	private String log4jConfigFile = null;
 	private ReadPipeThread reader = null;
 	private AggregateAndWriteLogsThread writer = null;
-	private int queueSize = 100000;
+	private int queueSize = 10000;
 	private BlockingDeque<String> dequeue = new LinkedBlockingDeque<String>(queueSize);
-	private long maxTimeBetweenLinesOfAMessage = 100l;
-	private long maxTimeToKeepAMessage = 2000l;
-	private int maxMessageSize = 2048;
-	private int incomingBufferSize = 8192;
+	private long maxTimeBetweenLinesOfAMessage = 2000l;
+	private long maxTimeToKeepAMessage = 5000l;
+	private int maxMessageSize = 30720;
+	private int incomingBufferSize = 16348;
 	private static final String THE_END = "STOP_LOGGING";
 	private Logger logger = null;
 	private Exception readerException = null;
@@ -61,7 +61,7 @@ public class LogAgg {
     
     public void configure(String[] args) {
     	Options options = new Options();
-    	options.addOption("j", "jobname", true, "Job name");
+    	options.addOption("j", "job_name", true, "Job name");
     	options.addOption("t", "application_name", true, "Job name (compatible to logger)");
     	options.addOption("c", "config_file", true, "Log4j config file");
     	options.addOption("g", "graylog_host", true, "Graylog host");
@@ -69,6 +69,7 @@ public class LogAgg {
     	options.addOption("s", "max_message_size", true, "Max message size");
     	options.addOption("x", "max_time_between_lines", true, "Max time between lines to get them as one message");
     	options.addOption("y", "max_time_until_send", true, "Max time to collect data until a new message will be send");
+    	options.addOption("p", "pid", true, "Process identifier");
     	CommandLineParser parser = new DefaultParser();
     	try {
 			String message = null;
@@ -161,8 +162,8 @@ public class LogAgg {
 		if (graylogHost != null) {
 			GelfAppender ga = new GelfAppender();
 			ga.setGraylogHost(graylogHost);
-			String jobStartedAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(applicationStartTime);
-			String additinalFields = "{'jobName':'" + jobName + "','jobStartedAt':'" + jobStartedAt + "'}";
+			String jobStartedAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(applicationStartTime);
+			String additinalFields = "{'application_name':'" + jobName + "','job_started_at':'" + jobStartedAt + "'}";
 			ga.setAdditionalFields(additinalFields);
 			Logger.getRootLogger().addAppender(ga);
 			configured = true;
@@ -303,13 +304,12 @@ public class LogAgg {
 							// input within time frame for a message
 							message.append(line);
 							message.append("\n");
-							if ((currentMessageReceivedAt - lastMessageSendAt) > maxTimeToKeepAMessage) {
+							if (message.length() > maxMessageSize) {
+								sendMessage = true;
+							} else if ((currentMessageReceivedAt - lastMessageSendAt) > maxTimeToKeepAMessage) {
 								sendMessage = true;
 							} else {
 								sendMessage = false;
-							}
-							if (message.length() > maxMessageSize) {
-								sendMessage = true;
 							}
 						}
 					} else {
