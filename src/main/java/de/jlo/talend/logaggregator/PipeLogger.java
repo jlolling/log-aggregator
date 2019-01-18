@@ -3,6 +3,7 @@ package de.jlo.talend.logaggregator;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.BlockingDeque;
@@ -17,6 +18,8 @@ import org.apache.commons.cli.Options;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.log4j.MDC;
+import org.apache.log4j.PatternLayout;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.xml.DOMConfigurator;
 import org.graylog2.log.GelfAppender;
@@ -26,7 +29,7 @@ import org.graylog2.log.GelfAppender;
  * @author jan.lolling@gmail.com
  *
  */
-public class LogAgg {
+public class PipeLogger {
 	
 	private String log4jConfigFile = null;
 	private ReadPipeThread reader = null;
@@ -46,7 +49,7 @@ public class LogAgg {
 	private Date applicationStartTime = new Date();
 	
     public static void main(String[] args) {
-    	LogAgg la = new LogAgg();
+    	PipeLogger la = new PipeLogger();
     	la.configure(args);
     	try {
         	la.initLog4J();
@@ -64,7 +67,7 @@ public class LogAgg {
     	options.addOption("j", "job_name", true, "Job name");
     	options.addOption("t", "application_name", true, "Job name (compatible to logger)");
     	options.addOption("c", "config_file", true, "Log4j config file");
-    	options.addOption("g", "graylog_host", true, "Graylog host");
+    	options.addOption("g", "graylog_host", true, "Graylog host [host|host:port|tcp:host|tcp:host:post]");
     	options.addOption("q", "queue_size", true, "Message queue size");
     	options.addOption("s", "max_message_size", true, "Max message size");
     	options.addOption("x", "max_time_between_lines", true, "Max time between lines to get them as one message");
@@ -136,6 +139,9 @@ public class LogAgg {
     	if (jobName == null) {
     		throw new Exception("Job name not set!");
     	}
+		String jobStartedAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(applicationStartTime);
+    	MDC.put("application_name", jobName);
+    	MDC.put("job_started_at", jobStartedAt);
     	logger = Logger.getLogger(jobName);
     	boolean configured = false;
 		if (log4jConfigFile != null) {
@@ -161,11 +167,35 @@ public class LogAgg {
 		}
 		if (graylogHost != null) {
 			GelfAppender ga = new GelfAppender();
-			ga.setGraylogHost(graylogHost);
-			String jobStartedAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(applicationStartTime);
+			boolean useTcpForGraylog = graylogHost.startsWith("tcp:");
+			if (useTcpForGraylog) {
+				graylogHost = graylogHost.substring("tcp:".length());
+			}
+			int pos = graylogHost.indexOf(":");
+			if (pos > 0) {
+				ga.setGraylogHost((useTcpForGraylog ? "tcp:" : "") + graylogHost.substring(0, pos));
+				ga.setGraylogPort(Integer.parseInt(graylogHost.substring(pos + 1)));
+			} else {
+ 				ga.setGraylogHost((useTcpForGraylog ? "tcp:" : "") + graylogHost);
+			}
 			String additinalFields = "{'application_name':'" + jobName + "','job_started_at':'" + jobStartedAt + "'}";
 			ga.setAdditionalFields(additinalFields);
-			Logger.getRootLogger().addAppender(ga);
+	    	String processInfo = ManagementFactory.getRuntimeMXBean().getName();
+	    	String originHost = null;
+			int p = processInfo.indexOf('@');
+			if (p > 0) {
+				originHost = processInfo.substring(p + 1);
+			} else {
+				originHost = processInfo;
+			}
+			ga.setAddExtendedInformation(true);
+			ga.setOriginHost(originHost);
+			ga.setIncludeLocation(true);
+			ga.setLayout(new PatternLayout());
+			ga.setExtractStacktrace(true);
+			ga.setFacility("talend-job");
+			ga.activateOptions();
+			logger.addAppender(ga);
 			configured = true;
 		}
 		if (configured == false) {

@@ -9,7 +9,7 @@ public class TestLogAgg {
 	@Test
 	public void testLineCombining() throws Exception {
 		long maxTimeBetweenLinesOfAMessage = 10l;
-		LogAgg l = new LogAgg();
+		PipeLogger l = new PipeLogger();
 		l.setJobName("test_job");
 		l.initLog4J();
 		l.setMaxTimeBetweenLinesOfAMessage(maxTimeBetweenLinesOfAMessage);
