@@ -4,8 +4,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import de.jlo.talend.logaggregator.LogAgg;
-
 public class TestLogAgg {
 
 	@Test
@@ -15,14 +13,16 @@ public class TestLogAgg {
 		l.setJobName("test_job");
 		l.initLog4J();
 		l.setMaxTimeBetweenLinesOfAMessage(maxTimeBetweenLinesOfAMessage);
+		//l.setMaxMessageSize(20);
 		l.startWriter();
-		for (int i = 0; i < 10000; i++) {
+		for (int i = 0; i < 2; i++) {
 			l.log(i + "");
-			if (i % 100 == 0) {
+			if (i % 10 == 0) {
 				Thread.sleep(maxTimeBetweenLinesOfAMessage + (maxTimeBetweenLinesOfAMessage / 2));
 			}
 		}
 		l.stop();
+		l.waitUntilEnd();
 		assertTrue(true);
 	}
 

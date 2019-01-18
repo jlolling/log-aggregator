@@ -35,6 +35,7 @@ public class LogAgg {
 	private BlockingDeque<String> dequeue = new LinkedBlockingDeque<String>(queueSize);
 	private long maxTimeBetweenLinesOfAMessage = 100l;
 	private long maxTimeToKeepAMessage = 2000l;
+	private int maxMessageSize = 2048;
 	private int incomingBufferSize = 8192;
 	private static final String THE_END = "STOP_LOGGING";
 	private Logger logger = null;
@@ -60,10 +61,14 @@ public class LogAgg {
     
     public void configure(String[] args) {
     	Options options = new Options();
-    	options.addRequiredOption("j", "jobname", true, "Job name");
+    	options.addOption("j", "jobname", true, "Job name");
     	options.addOption("t", "application_name", true, "Job name (compatible to logger)");
     	options.addOption("c", "config_file", true, "Log4j config file");
     	options.addOption("g", "graylog_host", true, "Graylog host");
+    	options.addOption("q", "queue_size", true, "Message queue size");
+    	options.addOption("s", "max_message_size", true, "Max message size");
+    	options.addOption("x", "max_time_between_lines", true, "Max time between lines to get them as one message");
+    	options.addOption("y", "max_time_until_send", true, "Max time to collect data until a new message will be send");
     	CommandLineParser parser = new DefaultParser();
     	try {
 			String message = null;
@@ -73,9 +78,33 @@ public class LogAgg {
 				jobName = cmd.getOptionValue('t');
 			}
 			if (jobName == null) {
-				message = "Parameter jobname must be set.";
+				message = "Parameter jobname or application_name must be set.";
 			}
 			log4jConfigFile = cmd.getOptionValue('c');
+			String mtbl_string = cmd.getOptionValue('x');
+			try {
+				if (mtbl_string != null && mtbl_string.trim().isEmpty() == false) {
+					setMaxTimeBetweenLinesOfAMessage(Long.valueOf(mtbl_string));
+				}
+			} catch (Exception e1) {
+				message = "Parameter x must be an long value.";
+			}
+			String mtuns_string = cmd.getOptionValue('y');
+			try {
+				if (mtuns_string != null && mtuns_string.trim().isEmpty() == false) {
+					setMaxTimeToKeepAMessage(Long.valueOf(mtuns_string));
+				}
+			} catch (Exception e1) {
+				message = "Parameter y must be an long value.";
+			}
+			String size = cmd.getOptionValue('s');
+			try {
+				if (size != null && size.trim().isEmpty() == false) {
+					setMaxMessageSize(Integer.valueOf(size));
+				}
+			} catch (Exception e1) {
+				message = "Parameter s must be an integer value.";
+			}
 			if (message != null) {
 				System.out.println(message);
 				HelpFormatter formatter = new HelpFormatter();
@@ -169,6 +198,11 @@ public class LogAgg {
     	if (reader != null) {
     		reader.stopReading();
     	}
+    	try {
+        	dequeue.put(THE_END);
+    	} catch (Exception e) {
+    		//ignore
+    	}
     }
     
     public void startPipeReader() {
@@ -190,6 +224,7 @@ public class LogAgg {
     	public void stopReading() {
     		stop = true;
     		try {
+    			//System.out.println("put: " + THE_END);
         		dequeue.put(THE_END);
     		} catch (Exception e) {
     			// ignore
@@ -273,6 +308,9 @@ public class LogAgg {
 							} else {
 								sendMessage = false;
 							}
+							if (message.length() > maxMessageSize) {
+								sendMessage = true;
+							}
 						}
 					} else {
 						sendMessage = true;
@@ -343,6 +381,22 @@ public class LogAgg {
 
 	public void setGraylogHost(String graylogHost) {
 		this.graylogHost = graylogHost;
+	}
+
+	public long getMaxTimeToKeepAMessage() {
+		return maxTimeToKeepAMessage;
+	}
+
+	public void setMaxTimeToKeepAMessage(long maxTimeToKeepAMessage) {
+		this.maxTimeToKeepAMessage = maxTimeToKeepAMessage;
+	}
+
+	public int getMaxMessageSize() {
+		return maxMessageSize;
+	}
+
+	public void setMaxMessageSize(int maxMessageSize) {
+		this.maxMessageSize = maxMessageSize;
 	}
     
 }
