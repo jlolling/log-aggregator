@@ -36,7 +36,7 @@ public class PipeLogger {
 	private AggregateAndWriteLogsThread writer = null;
 	private int queueSize = 10000;
 	private BlockingDeque<String> dequeue = new LinkedBlockingDeque<String>(queueSize);
-	private long maxTimeBetweenLinesOfAMessage = 2000l;
+	private long maxTimeBetweenLinesOfAMessage = 500l;
 	private long maxTimeToKeepAMessage = 5000l;
 	private int maxMessageSize = 30720;
 	private int incomingBufferSize = 16348;
