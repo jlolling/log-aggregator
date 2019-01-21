@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -45,9 +47,13 @@ public class PipeLogger {
 	private Exception readerException = null;
 	private Exception writerException = null;
 	private String jobName = null;
+	private String jobVersion = null;
 	private String graylogHost = null;
 	private Date applicationStartTime = new Date();
 	private boolean addStartStopMessage = true;
+	private String layer = null;
+	private String originHost = null;
+	private Map<String, String> additionalFieldMap = new HashMap<>();
 	
     public static void main(String[] args) {
     	PipeLogger la = new PipeLogger();
@@ -75,8 +81,16 @@ public class PipeLogger {
     	options.addOption("y", "max_time_until_send", true, "Max time to collect data until a new message will be send");
     	options.addOption("p", "pid", true, "Process identifier");
     	options.addOption("a", "add_start_stop", true, "Add a message for start and stop (default = true)");
+    	options.addOption("l", "layer", true, "Layer or system stage: [test|ref|prod]");
     	CommandLineParser parser = new DefaultParser();
     	try {
+	    	String processInfo = ManagementFactory.getRuntimeMXBean().getName();
+			int p = processInfo.indexOf('@');
+			if (p > 0) {
+				originHost = processInfo.substring(p + 1);
+			} else {
+				originHost = processInfo;
+			}
 			String message = null;
     		CommandLine cmd = parser.parse( options, args);
 			jobName = cmd.getOptionValue('j');
@@ -114,7 +128,7 @@ public class PipeLogger {
 			if (message != null) {
 				System.out.println(message);
 				HelpFormatter formatter = new HelpFormatter();
-				formatter.printHelp("java -jar log-aggregator-1.0.jar", options);
+				formatter.printHelp("java -jar log-aggregator-<version>.jar", options);
 				System.exit(4);
 			}
 			graylogHost = cmd.getOptionValue('g');
@@ -122,10 +136,21 @@ public class PipeLogger {
 			if (a != null && a.trim().isEmpty() == false) {
 				addStartStopMessage = ("false".equals(a) == false);
 			}
+			layer = cmd.getOptionValue('l');
+			if (layer == null) {
+				// try to detect the layer by server name
+				if (originHost.contains("test")) {
+					layer = "test";
+				} else if (originHost.contains("ref")) {
+					layer = "ref";
+				} else if (originHost.contains("talendjob")) {
+					layer = "prod";
+				}
+			}
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("java -jar log-aggregator-1.0.jar", options);
+			formatter.printHelp("java -jar log-aggregator-<version>.jar", options);
 			System.exit(4);
 		}
     }
@@ -150,7 +175,7 @@ public class PipeLogger {
     	MDC.put("job_started_at", jobStartedAt);
     	logger = Logger.getLogger(jobName);
     	boolean configured = false;
-		if (log4jConfigFile != null) {
+		if (log4jConfigFile != null && log4jConfigFile.trim().isEmpty() == false) {
 			try {
 				// find the log4j configuration and configure it
 				File cf = new File(log4jConfigFile);
@@ -171,7 +196,7 @@ public class PipeLogger {
 				throw new Exception(e);
 			}
 		}
-		if (graylogHost != null) {
+		if (graylogHost != null && graylogHost.trim().isEmpty() == false) {
 			GelfAppender ga = new GelfAppender();
 			boolean useTcpForGraylog = graylogHost.startsWith("tcp:");
 			if (useTcpForGraylog) {
@@ -184,18 +209,13 @@ public class PipeLogger {
 			} else {
  				ga.setGraylogHost((useTcpForGraylog ? "tcp:" : "") + graylogHost);
 			}
-			String additinalFields = "{'application_name':'" + jobName + "','job_started_at':'" + jobStartedAt + "'}";
-			ga.setAdditionalFields(additinalFields);
-	    	String processInfo = ManagementFactory.getRuntimeMXBean().getName();
-	    	String originHost = null;
-			int p = processInfo.indexOf('@');
-			if (p > 0) {
-				originHost = processInfo.substring(p + 1);
-			} else {
-				originHost = processInfo;
-			}
-			ga.setAddExtendedInformation(true);
+			additionalFieldMap.put("application_name", jobName);
+			additionalFieldMap.put("application_version", jobVersion);
+			additionalFieldMap.put("job_started_at", jobStartedAt);
+			additionalFieldMap.put("system_stage", layer);
+			ga.setAdditionalFields(buildAdditionalFields());
 			ga.setOriginHost(originHost);
+			ga.setAddExtendedInformation(true);
 			ga.setIncludeLocation(true);
 			ga.setLayout(new PatternLayout());
 			ga.setExtractStacktrace(true);
@@ -207,6 +227,34 @@ public class PipeLogger {
 		if (configured == false) {
 			BasicConfigurator.configure();
 		}
+    }
+    
+    private String buildAdditionalFields() {
+    	StringBuilder sb = new StringBuilder();
+    	boolean firstLoop = true;
+    	for (Map.Entry<String, String> entry : additionalFieldMap.entrySet()) {
+    		if (firstLoop) {
+    			firstLoop = false;
+    			sb.append("{");
+    		} else {
+    			sb.append(",");
+    		}
+    		if (entry.getValue() != null) {
+        		sb.append("'");
+        		sb.append(entry.getKey());
+        		sb.append("':'");
+        		sb.append(entry.getValue());
+        		sb.append("'");
+    		}
+    	}
+    	if (firstLoop == false) {
+			sb.append("}");
+    	}
+    	if (sb.length() > 0) {
+    		return sb.toString();
+    	} else {
+    		return null;
+    	}
     }
     
     public void waitUntilEnd() {
@@ -442,6 +490,22 @@ public class PipeLogger {
 
 	public void setMaxMessageSize(int maxMessageSize) {
 		this.maxMessageSize = maxMessageSize;
+	}
+
+	public String getLayer() {
+		return layer;
+	}
+
+	public void setLayer(String systemStage) {
+		this.layer = systemStage;
+	}
+
+	public String getJobVersion() {
+		return jobVersion;
+	}
+
+	public void setJobVersion(String jobVersion) {
+		this.jobVersion = jobVersion;
 	}
     
 }
