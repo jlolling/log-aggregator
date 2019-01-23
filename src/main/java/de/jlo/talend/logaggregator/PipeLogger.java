@@ -73,6 +73,7 @@ public class PipeLogger {
     	Options options = new Options();
     	options.addOption("j", "job_name", true, "Job name");
     	options.addOption("t", "application_name", true, "Job name (compatible to logger)");
+    	options.addOption("v", "application_version", true, "Job Version");
     	options.addOption("c", "config_file", true, "Log4j config file");
     	options.addOption("g", "graylog_host", true, "Graylog host [host|host:port|tcp:host|tcp:host:post]");
     	options.addOption("q", "queue_size", true, "Message queue size");
@@ -100,6 +101,7 @@ public class PipeLogger {
 			if (jobName == null) {
 				message = "Parameter jobname or application_name must be set.";
 			}
+			jobVersion = cmd.getOptionValue('v');
 			log4jConfigFile = cmd.getOptionValue('c');
 			String mtbl_string = cmd.getOptionValue('x');
 			try {
