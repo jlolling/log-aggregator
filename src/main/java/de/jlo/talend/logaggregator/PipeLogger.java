@@ -75,7 +75,7 @@ public class PipeLogger {
     	options.addOption("t", "application_name", true, "Job name (compatible to logger)");
     	options.addOption("v", "application_version", true, "Job Version");
     	options.addOption("c", "config_file", true, "Log4j config file");
-    	options.addOption("g", "graylog_host", true, "Graylog host [host|host:port|tcp:host|tcp:host:post]");
+    	options.addOption("g", "graylog_host", true, "Graylog host [host|host:port|tcp:host|tcp:host:port]");
     	options.addOption("q", "queue_size", true, "Message queue size");
     	options.addOption("s", "max_message_size", true, "Max message size");
     	options.addOption("x", "max_time_between_lines", true, "Max time between lines to get them as one message");
