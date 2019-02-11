@@ -24,7 +24,6 @@ import org.apache.log4j.MDC;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.xml.DOMConfigurator;
-import org.graylog2.log.GelfAppender;
 
 /**
  * Log line aggregator
@@ -54,6 +53,7 @@ public class PipeLogger {
 	private String layer = null;
 	private String originHost = null;
 	private Map<String, String> additionalFieldMap = new HashMap<>();
+	private int timeout = 5000;
 	
     public static void main(String[] args) {
     	PipeLogger la = new PipeLogger();
@@ -76,6 +76,7 @@ public class PipeLogger {
     	options.addOption("v", "application_version", true, "Job Version");
     	options.addOption("c", "config_file", true, "Log4j config file");
     	options.addOption("g", "graylog_host", true, "Graylog host [host|host:port|tcp:host|tcp:host:port]");
+    	options.addOption("o", "graylog_timeout", true, "Timeout for Graylog TCP sender (default=5000)");
     	options.addOption("q", "queue_size", true, "Message queue size");
     	options.addOption("s", "max_message_size", true, "Max message size");
     	options.addOption("x", "max_time_between_lines", true, "Max time between lines to get them as one message");
@@ -149,6 +150,17 @@ public class PipeLogger {
 					layer = "prod";
 				}
 			}
+			String timeoutStr = cmd.getOptionValue('o');
+			if (timeoutStr != null && timeoutStr.trim().isEmpty() == false) {
+				try {
+					timeout = Integer.parseInt(timeoutStr);
+					if (timeout <= 0) {
+						throw new Exception("Graylog timeout must be an integer value > 0");
+					}
+				} catch (Exception pe) {
+					message = "Get Graylog timeout failed. Error: " + pe.getMessage();
+				}
+			}
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
@@ -199,7 +211,7 @@ public class PipeLogger {
 			}
 		}
 		if (graylogHost != null && graylogHost.trim().isEmpty() == false) {
-			GelfAppender ga = new GelfAppender();
+			GelfAppenderExt ga = new GelfAppenderExt();
 			boolean useTcpForGraylog = graylogHost.startsWith("tcp:");
 			if (useTcpForGraylog) {
 				graylogHost = graylogHost.substring("tcp:".length());
