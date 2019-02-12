@@ -51,9 +51,9 @@ public class GelfTCPSenderExt extends GelfTCPSender {
 			try {
 				// reconnect if necessary
 				setupSocket();
-
 				os.write(data);
 				ok = true;
+				break;
 			} catch (IOException e) {
 				ex = e;
 				socket = null;
