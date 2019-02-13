@@ -27,7 +27,6 @@ public class GelfTCPSenderExt extends GelfTCPSender {
 		this.maxRetry = maxRetry;
 		this.host = InetAddress.getByName(host);
 		this.port = port;
-		setupSocket();
 	}
 	
 	private void setupSocket() throws IOException {
