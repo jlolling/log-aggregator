@@ -54,6 +54,7 @@ public class PipeLogger {
 	private String originHost = null;
 	private Map<String, String> additionalFieldMap = new HashMap<>();
 	private int timeout = 5000;
+	private boolean sendStandardOutput = false;
 	
     public static void main(String[] args) {
     	PipeLogger la = new PipeLogger();
@@ -84,6 +85,7 @@ public class PipeLogger {
     	options.addOption("p", "pid", true, "Process identifier");
     	options.addOption("a", "add_start_stop", true, "Add a message for start and stop (default = true)");
     	options.addOption("l", "layer", true, "Layer or system stage: [test|ref|prod]");
+    	options.addOption("r", "redirect_to_stndout", true, "Redirect all input received via pipe also to standard out. (default=false)");
     	CommandLineParser parser = new DefaultParser();
     	try {
 	    	String processInfo = ManagementFactory.getRuntimeMXBean().getName();
@@ -137,7 +139,7 @@ public class PipeLogger {
 			graylogHost = cmd.getOptionValue('g');
 			String a = cmd.getOptionValue('a');
 			if (a != null && a.trim().isEmpty() == false) {
-				addStartStopMessage = ("false".equals(a) == false);
+				addStartStopMessage = ("false".equalsIgnoreCase(a) == false);
 			}
 			layer = cmd.getOptionValue('l');
 			if (layer == null) {
@@ -161,6 +163,7 @@ public class PipeLogger {
 					message = "Get Graylog timeout failed. Error: " + pe.getMessage();
 				}
 			}
+			sendStandardOutput = "true".equalsIgnoreCase(cmd.getOptionValue('r'));
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
@@ -348,6 +351,9 @@ public class PipeLogger {
     					if (line != null) {
     						//System.out.println("put: " + line);
         					dequeue.put(line);
+        					if (sendStandardOutput) {
+        						System.out.println(line);
+        					}
     					} else {
     						break;
     					}

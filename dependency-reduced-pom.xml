@@ -4,7 +4,7 @@
   <groupId>de.jlo.talend</groupId>
   <artifactId>log-aggregator</artifactId>
   <name>log-aggregator</name>
-  <version>3.1</version>
+  <version>4.0</version>
   <url>http://maven.apache.org</url>
   <build>
     <plugins>
