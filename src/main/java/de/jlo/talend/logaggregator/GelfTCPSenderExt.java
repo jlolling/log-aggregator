@@ -17,10 +17,10 @@ public class GelfTCPSenderExt extends GelfTCPSender {
 	private Socket socket;
     private OutputStream os;
     private int timeout = 0;
+    private int waitTimeAfterFailure = 500;
     private int maxRetry = 5;
 
-    public GelfTCPSenderExt() {
-    }
+    public GelfTCPSenderExt() {}
 
 	public GelfTCPSenderExt(String host, int port, int timeout, int maxRetry) throws IOException {
 		this.timeout = timeout;
@@ -39,7 +39,7 @@ public class GelfTCPSenderExt extends GelfTCPSender {
 
 	@Override
 	public GelfSenderResult sendMessage(GelfMessage message) {
-		if (shutdown || !message.isValid()) {
+		if (shutdown || message.isValid() == false) {
 			return GelfSenderResult.MESSAGE_NOT_VALID_OR_SHUTTING_DOWN;
 		}
 		Exception ex = null;
@@ -56,11 +56,19 @@ public class GelfTCPSenderExt extends GelfTCPSender {
 			} catch (IOException e) {
 				ex = e;
 				socket = null;
-				if (currentAttempt < maxRetry) {
+				if (os != null) {
 					try {
-						Thread.sleep(100);
+						os.close();
+					} catch (Throwable ie) {
+						// ignore
+					}
+					os = null;
+				}
+				if (currentAttempt <= maxRetry) {
+					try {
+						Thread.sleep(waitTimeAfterFailure);
 					} catch (Exception ie) {
-						System.err.println("Send message per TCP failed. (Will retry: attempt: #" + currentAttempt + " / " + maxRetry + ")" + ex.getMessage());
+						System.err.println("Send message per TCP failed. (Will retry: attempt: #" + currentAttempt + " / " + maxRetry + ") " + ex.getMessage());
 						return new GelfSenderResult(GelfSenderResult.ERROR_CODE, e);
 					}
 				}
@@ -78,14 +86,14 @@ public class GelfTCPSenderExt extends GelfTCPSender {
 	public void close() {
 		shutdown = true;
 		try {
-            if (os != null){
+            if (os != null) {
                 os.close();
             }
 			if (socket != null) {
 				socket.close();
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			// ignore
 		}
 	}
 
