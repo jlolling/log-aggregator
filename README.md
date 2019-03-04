@@ -30,3 +30,8 @@ usage: java -jar log-aggregator-<version>.jar
  -y,--max_time_until_send <arg>      Max time to collect data until a new
                                      message will be send
 ```
+
+This is a typical use case:
+```
+java -jar myapp.jar | java -jar log-aggregator-<version>.jar -t "myapp" -v "1.0" -l "production" -g tcp:graylog.local
+```
