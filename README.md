@@ -35,3 +35,4 @@ This is a typical use case:
 ```
 java -jar myapp.jar | java -jar log-aggregator-<version>.jar -t "myapp" -v "1.0" -l "production" -g tcp:graylog.local
 ```
+Please take note, in a Linux pipe the last program in the pipe will be started first to establish the input channel.
