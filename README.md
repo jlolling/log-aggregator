@@ -4,6 +4,7 @@ If there is not log4j integrated or configured, tools like graylog will take eve
 This program does:
 * combines all input t one message if the input time between lines is <= 10ms.
 * takes care the aggregation of lines will not last longer 2s to always have a current logging.
+* Sends the messages to Graylog if configured
 
 ```
 java -jar log-aggregator.jar
@@ -30,3 +31,9 @@ usage: java -jar log-aggregator-<version>.jar
  -y,--max_time_until_send <arg>      Max time to collect data until a new
                                      message will be send
 ```
+
+This is a typical use case:
+```
+java -jar myapp.jar | java -jar log-aggregator-<version>.jar -t "myapp" -v "1.0" -l "production" -g "tcp:graylog.local"
+```
+Please take note, in a Linux pipe the last program in the pipe will be started first to establish the input channel.
