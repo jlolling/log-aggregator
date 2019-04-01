@@ -4,6 +4,7 @@ If there is not log4j integrated or configured, tools like graylog will take eve
 This program does:
 * combines all input t one message if the input time between lines is <= 10ms.
 * takes care the aggregation of lines will not last longer 2s to always have a current logging.
+* Sends the messages to Graylog if configured
 
 ```
 java -jar log-aggregator.jar
