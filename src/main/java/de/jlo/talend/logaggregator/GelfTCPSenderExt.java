@@ -77,7 +77,7 @@ public class GelfTCPSenderExt extends GelfTCPSender {
 		if (ok) {
 			return GelfSenderResult.OK;
 		} else {
-			System.err.println("Send message per TCP failed (No retry left. attempt: #" + currentAttempt + " / " + maxRetry + "). " + ex.getMessage());
+			System.err.println("Send message per TCP failed (No allowed retry left. Number retries: " + maxRetry + "). " + ex.getMessage());
 			return new GelfSenderResult(GelfSenderResult.ERROR_CODE, ex);
 		}
 	}
