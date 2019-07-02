@@ -13,6 +13,8 @@ usage: java -jar log-aggregator-<version>.jar
  -a,--add_start_stop <arg>           Add a message for start and stop
                                      (default = true)
  -c,--config_file <arg>              Log4j config file
+ -f,--flush_message_signal <arg>     Text to force flush the message.
+                                     (default=FLUSH_MESSAGE)
  -g,--graylog_host <arg>             Graylog host
                                      [host|host:port|tcp:host|tcp:host:por
                                      t]
@@ -23,6 +25,8 @@ usage: java -jar log-aggregator-<version>.jar
                                      (default=5000)
  -p,--pid <arg>                      Process identifier
  -q,--queue_size <arg>               Message queue size
+ -r,--redirect_to_stndout <arg>      Redirect all input received via pipe
+                                     also to standard out. (default=false)
  -s,--max_message_size <arg>         Max message size
  -t,--application_name <arg>         Job name (compatible to logger)
  -v,--application_version <arg>      Job Version
