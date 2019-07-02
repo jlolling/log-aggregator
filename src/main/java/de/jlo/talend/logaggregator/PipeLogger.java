@@ -87,6 +87,7 @@ public class PipeLogger {
     	options.addOption("a", "add_start_stop", true, "Add a message for start and stop (default = true)");
     	options.addOption("l", "layer", true, "Layer or system stage: [test|ref|prod]");
     	options.addOption("r", "redirect_to_stndout", true, "Redirect all input received via pipe also to standard out. (default=false)");
+    	options.addOption("f", "flush_message_signal", true, "Text to force flush the message. (default=FLUSH_MESSAGE)");
     	CommandLineParser parser = new DefaultParser();
     	try {
 	    	String processInfo = ManagementFactory.getRuntimeMXBean().getName();
@@ -317,11 +318,6 @@ public class PipeLogger {
     	} catch (Exception e) {
     		//ignore
     	}
-    	if (addStartStopMessage) {
-        	checkLogger();
-    		logger.info("Stop: " + jobName);
-    	}
-    	LogManager.shutdown();
     }
     
     public void startPipeReader() {
@@ -337,6 +333,7 @@ public class PipeLogger {
     	writer.setName("writer-thread#" + writer.hashCode());
     	writer.start();
     	if (addStartStopMessage) {
+    		checkLogger();
     		logger.info("Start: " + jobName);
     	}
     }
@@ -434,7 +431,7 @@ public class PipeLogger {
 							message.append("\n");
 							if (message.length() > maxMessageSize) {
 								sendMessage = true;
-							} else if ((currentMessageReceivedAt - lastMessageSendAt) > maxTimeToKeepAMessage) {
+							} else if (maxTimeToKeepAMessage > 0l && (currentMessageReceivedAt - lastMessageSendAt) > maxTimeToKeepAMessage) {
 								sendMessage = true;
 							} else {
 								sendMessage = false;
@@ -476,6 +473,7 @@ public class PipeLogger {
 	    	if (addStartStopMessage) {
 	    		logger.info("Stop: " + jobName);
 	    	}
+	    	LogManager.shutdown();
     	}
     	
     }

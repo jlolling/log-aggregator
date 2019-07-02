@@ -7,17 +7,16 @@ import org.junit.Test;
 public class TestLogAgg {
 
 	@Test
-	public void testLineCombining() throws Exception {
+	public void testSeparateMessageByTime() throws Exception {
 		long maxTimeBetweenLinesOfAMessage = 10l;
 		PipeLogger l = new PipeLogger();
-		l.setJobName("test_job");
+		l.setJobName("test_job1");
 		l.initLog4J();
 		l.setAddStartStopMessage(true);
 		TestAppender ta = new TestAppender();
 		ta.setDebug(true);
 		l.getLogger().addAppender(ta);
 		l.setMaxTimeBetweenLinesOfAMessage(maxTimeBetweenLinesOfAMessage);
-		//l.setMaxMessageSize(20);
 		l.startWriter();
 		for (int i = 0; i < 20; i++) {
 			l.log("i=" + i);
@@ -34,19 +33,40 @@ public class TestLogAgg {
 	public void testSeparateMessageBySignal() throws Exception {
 		long maxTimeBetweenLinesOfAMessage = 10l;
 		PipeLogger l = new PipeLogger();
-		l.setJobName("test_job");
+		l.setJobName("test_job2");
 		l.initLog4J();
 		l.setAddStartStopMessage(true);
 		TestAppender ta = new TestAppender();
+		ta.setDebug(true);
 		l.getLogger().addAppender(ta);
 		l.setMaxTimeBetweenLinesOfAMessage(maxTimeBetweenLinesOfAMessage);
-		//l.setMaxMessageSize(20);
 		l.startWriter();
 		for (int i = 0; i < 20; i++) {
-			l.log(i + "");
+			l.log("i=" + i);
 			if (i > 0 && i % 10 == 0) {
-				//l.log(l.getFlushMessageSignal());
+				l.log(l.getFlushMessageSignal());
 			}
+		}
+		l.stop();
+		l.waitUntilEnd();
+		assertEquals(4, ta.getCountEvents());
+	}
+
+	@Test
+	public void testSeparateMessageBySize() throws Exception {
+		long maxTimeBetweenLinesOfAMessage = 10l;
+		PipeLogger l = new PipeLogger();
+		l.setJobName("test_job3");
+		l.initLog4J();
+		l.setAddStartStopMessage(true);
+		TestAppender ta = new TestAppender();
+		ta.setDebug(true);
+		l.getLogger().addAppender(ta);
+		l.setMaxTimeBetweenLinesOfAMessage(maxTimeBetweenLinesOfAMessage);
+		l.setMaxMessageSize(50);
+		l.startWriter();
+		for (int i = 0; i < 20; i++) {
+			l.log("i=" + i);
 		}
 		l.stop();
 		l.waitUntilEnd();
