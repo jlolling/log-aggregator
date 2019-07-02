@@ -7,7 +7,7 @@ import org.junit.Test;
 public class TestLogAgg {
 
 	@Test
-	public void testSeparateMessageByTime() throws Exception {
+	public void testSeparateMessageByTimeBetweenLines() throws Exception {
 		long maxTimeBetweenLinesOfAMessage = 10l;
 		PipeLogger l = new PipeLogger();
 		l.setJobName("test_job1");
@@ -23,6 +23,28 @@ public class TestLogAgg {
 			if (i > 0 && i % 10 == 0) {
 				Thread.sleep(maxTimeBetweenLinesOfAMessage + (maxTimeBetweenLinesOfAMessage / 2));
 			}
+		}
+		l.stop();
+		l.waitUntilEnd();
+		assertEquals(4, ta.getCountEvents());
+	}
+
+	@Test
+	public void testSeparateMessageByTimeToKeep() throws Exception {
+		long maxTimeBetweenLinesOfAMessage = 100l;
+		PipeLogger l = new PipeLogger();
+		l.setJobName("test_job1");
+		l.initLog4J();
+		l.setAddStartStopMessage(true);
+		TestAppender ta = new TestAppender();
+		ta.setDebug(true);
+		l.getLogger().addAppender(ta);
+		l.setMaxTimeBetweenLinesOfAMessage(maxTimeBetweenLinesOfAMessage);
+		l.setMaxTimeToKeepAMessage(1000l);
+		l.startWriter();
+		for (int i = 0; i < 20; i++) {
+			l.log("i=" + i);
+			Thread.sleep(90l);
 		}
 		l.stop();
 		l.waitUntilEnd();
