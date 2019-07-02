@@ -42,6 +42,7 @@ public class PipeLogger {
 	private int maxMessageSize = 30720;
 	private int incomingBufferSize = 16348;
 	private static final String THE_END = "STOP_LOGGING";
+	private String flushMessageSignal = "FLUSH_MESSAGE";
 	private Logger logger = null;
 	private Exception readerException = null;
 	private Exception writerException = null;
@@ -245,6 +246,17 @@ public class PipeLogger {
 			BasicConfigurator.configure();
 		}
     }
+
+    private void checkLogger() {
+    	if (logger == null) {
+    		throw new IllegalStateException("Logger not initialized. Please call initLog4J() before.");
+    	}
+    }
+    
+    public Logger getLogger() {
+    	checkLogger();
+    	return logger;
+    }
     
     private String buildAdditionalFields() {
     	StringBuilder sb = new StringBuilder();
@@ -294,9 +306,6 @@ public class PipeLogger {
     public void start() {
     	startWriter();
     	startPipeReader();
-    	if (addStartStopMessage) {
-    		logger.info("Start: " + jobName);
-    	}
     }
     
     public void stop() {
@@ -309,6 +318,7 @@ public class PipeLogger {
     		//ignore
     	}
     	if (addStartStopMessage) {
+        	checkLogger();
     		logger.info("Stop: " + jobName);
     	}
     	LogManager.shutdown();
@@ -317,13 +327,18 @@ public class PipeLogger {
     public void startPipeReader() {
     	reader = new ReadPipeThread();
     	reader.setDaemon(true);
+    	reader.setName("reader-thread#" + reader.hashCode());
     	reader.start();
     }
     
     public void startWriter() {
     	writer = new AggregateAndWriteLogsThread();
     	writer.setDaemon(true);
+    	writer.setName("writer-thread#" + writer.hashCode());
     	writer.start();
+    	if (addStartStopMessage) {
+    		logger.info("Start: " + jobName);
+    	}
     }
     
     private class ReadPipeThread extends Thread {
@@ -409,6 +424,8 @@ public class PipeLogger {
 						if (line.equals(THE_END)) {
 							//System.out.println(THE_END + " received");
 							stop = true;
+							sendMessage = true;
+						} else if (line.equals(flushMessageSignal)) {
 							sendMessage = true;
 						} else {
 							long currentMessageReceivedAt = System.currentTimeMillis();
@@ -526,6 +543,24 @@ public class PipeLogger {
 
 	public void setJobVersion(String jobVersion) {
 		this.jobVersion = jobVersion;
+	}
+
+	public boolean isAddStartStopMessage() {
+		return addStartStopMessage;
+	}
+
+	public void setAddStartStopMessage(boolean addStartStopMessage) {
+		this.addStartStopMessage = addStartStopMessage;
+	}
+
+	public String getFlushMessageSignal() {
+		return flushMessageSignal;
+	}
+
+	public void setFlushMessageSignal(String flushMessageSignal) {
+		if (flushMessageSignal != null && flushMessageSignal.trim().isEmpty() == false) {
+			this.flushMessageSignal = flushMessageSignal;
+		}
 	}
     
 }
